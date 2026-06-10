@@ -12,6 +12,8 @@ BUILD_CMD = [
     "-std=c++17",
     SOURCE_FILE,
     "-lsqlite3",
+    "-lssl",
+    "-lcrypto",
     "-o",
     "mainserver"
 ]
@@ -32,7 +34,6 @@ def build():
     print("[BUILD] Failed")
     return False
 
-
 def run_server():
     global server_process
 
@@ -48,12 +49,30 @@ def run_server():
 
     server_process = subprocess.Popen(
         [BINARY],
-        stdout=None,
-        stderr=None
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1
     )
 
     print(f"[SERVER] PID: {server_process.pid}")
 
+    # start background thread to print server logs
+    import threading
+    
+    def print_logs(proc):
+        try:
+            while True:
+                line = proc.stdout.readline()
+                if line:
+                    print(f"{line}", end="", flush=True)
+                elif proc.poll() is not None:
+                    break
+        except Exception as e:
+            print(f"[ERROR] Log reader: {e}")
+
+    log_thread = threading.Thread(target=print_logs, args=(server_process,), daemon=True)
+    log_thread.start()
 
 def stop_server():
     global server_process

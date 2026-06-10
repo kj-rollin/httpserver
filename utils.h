@@ -128,7 +128,8 @@ void log_request(const std::string& ip,
     std::string line = "[" + std::string(time_buf) + "] " +
                        ip + " " + method + " " + path + " " +
                        std::to_string(status_code);
-    std::cout << line << "\n";
+    std::cerr << line << "\n";
+    std::cout.flush();
     std::ofstream log_file("server.log", std::ios::app);
     if (log_file.is_open()) log_file << line << "\n";
 }

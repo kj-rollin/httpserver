@@ -65,3 +65,36 @@ void handle_logout(const std::string& request,
         "\r\n";
     send(client_fd, response.c_str(), response.size(), 0);
 }
+
+void handle_register_post(const std::string& request,
+                          int client_fd,
+                          AppContext& ctx) {
+    auto params   = parse_body(extract_body(request));
+    auto username = params["username"];
+    auto password = params["password"];
+
+    if (username.empty() || password.empty()) {
+        std::string response =
+            "HTTP/1.1 302 Found\r\n"
+            "Location: /register.html?error=1\r\n"
+            "\r\n";
+        send(client_fd, response.c_str(), response.size(), 0);
+        return;
+    }
+
+    if (ctx.db->register_user(username, password)) {
+        // registered! redirect to login
+        std::string response =
+            "HTTP/1.1 302 Found\r\n"
+            "Location: /login.html?registered=1\r\n"
+            "\r\n";
+        send(client_fd, response.c_str(), response.size(), 0);
+    } else {
+        // username taken
+        std::string response =
+            "HTTP/1.1 302 Found\r\n"
+            "Location: /register.html?error=2\r\n"
+            "\r\n";
+        send(client_fd, response.c_str(), response.size(), 0);
+    }
+}

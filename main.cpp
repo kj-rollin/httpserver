@@ -36,6 +36,7 @@ int main() {
     router.add("GET",  "/login.html",    handle_login_page);
     router.add("POST", "/login",         handle_login_post);
     router.add("GET",  "/logout",        handle_logout);
+    router.add("POST", "/register", handle_register_post);
 
     // socket setup
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -47,6 +48,7 @@ int main() {
     listen(server_fd, 10);
 
     std::cout << "Server running on http://localhost:8080\n";
+    std::cout.flush();
 
     while (true) {
         int client_fd = accept(server_fd, nullptr, nullptr);
