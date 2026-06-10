@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>HealWell | Hospital Management System</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, 'Segoe UI', 'Inter', 'Helvetica Neue', sans-serif;
+      background-color: #f9fcff;
+      color: #1a2c3e;
+      line-height: 1.5;
+      scroll-behavior: smooth;
+    }
+
+    /* CSS variables - medical theme */
+    :root {
+      --primary-dark: #005f73;
+      --primary: #0a7e8c;
+      --primary-light: #e0f2f5;
+      --secondary: #2c6e9e;
+      --accent: #f4a261;
+      --white: #ffffff;
+      --gray-100: #f8fafc;
+      --gray-200: #eef2f6;
+      --gray-600: #5a6e7c;
+      --shadow-sm: 0 8px 20px rgba(0, 0, 0, 0.03), 0 2px 6px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.02);
+      --shadow-hover: 0 20px 30px -12px rgba(0, 95, 115, 0.2);
+      --radius-card: 1.25rem;
+      --radius-btn: 2rem;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* ========== HEADER & NAVIGATION ========== */
+    .top-bar {
+      background-color: var(--primary-dark);
+      color: white;
+      font-size: 0.85rem;
+      padding: 0.5rem 0;
+    }
+
+    .top-bar .container {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .emergency-contact {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .emergency-contact span {
+      background-color: #ffb347;
+      padding: 0.2rem 0.8rem;
+      border-radius: 30px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #1e2f3a;
+    }
+
+    .hospital-hours {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .main-header {
+      background: var(--white);
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(2px);
+    }
+
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 1rem 0;
+      gap: 1rem;
+    }
+
+    .logo h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .logo p {
+      font-size: 0.7rem;
+      color: var(--gray-600);
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links ul {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      font-weight: 600;
+      color: #1f3b4c;
+      transition: 0.2s;
+      padding-bottom: 4px;
+      border-bottom: 2px solid transparent;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .appointment-btn {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.6rem 1.3rem;
+      border-radius: var(--radius-btn);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .appointment-btn:hover {
+      background-color: var(--primary-dark);
+      transform: scale(1.02);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* ========== HERO SECTION ========== */
+    .hero {
+      background: linear-gradient(105deg, #eef7fc 0%, #d9ecf2 100%);
+      padding: 3rem 0 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-grid {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+
+    .hero-content {
+      flex: 1.2;
+    }
+
+    .hero-badge {
+      background-color: var(--primary-light);
+      color: var(--primary-dark);
+      display: inline-block;
+      padding: 0.3rem 1rem;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .hero-content h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #003049;
+      margin-bottom: 1rem;
+    }
+
+    .hero-content p {
+      font-size: 1.1rem;
+      color: #2c4b5e;
+      max-width: 90%;
+      margin-bottom: 2rem;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      padding: 0.8rem 1.8rem;
+      border-radius: var(--radius-btn);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: inline-block;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 2px solid var(--primary);
+      color: var(--primary-dark);
+      padding: 0.8rem 1.8rem;
+      border-radius: var(--radius-btn);
+      text-decoration: none;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    .btn-outline:hover {
+      background: var(--primary-light);
+      border-color: var(--primary-dark);
+    }
+
+    .hero-stats {
+      flex: 0.8;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(4px);
+      border-radius: 2rem;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      text-align: center;
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-item h3 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+    }
+
+    /* ========== SERVICES SECTION ========== */
+    .section {
+      padding: 5rem 0;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #003049;
+    }
+
+    .section-sub {
+      text-align: center;
+      color: var(--gray-600);
+      max-width: 680px;
+      margin: 0 auto 3rem auto;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 2rem;
+    }
+
+    .service-card {
+      background: var(--white);
+      padding: 2rem 1.5rem;
+      border-radius: var(--radius-card);
+      text-align: center;
+      transition: all 0.25s ease;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid rgba(0,0,0,0.03);
+    }
+
+    .service-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-hover);
+      border-color: var(--primary-light);
+    }
+
+    .icon-emoji {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: inline-block;
+    }
+
+    .service-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    /* departments */
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.8rem;
+    }
+
+    .dept-item {
+      background: var(--white);
+      padding: 1.5rem;
+      border-radius: 1rem;
+      text-align: center;
+      transition: 0.2s;
+      border-left: 4px solid var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .dept-item:hover {
+      background: var(--primary-light);
+      transform: scale(1.02);
+    }
+
+    /* doctors section */
+    .doctors-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 2rem;
+    }
+
+    .doctor-card {
+      background: var(--white);
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.25s;
+      text-align: center;
+      padding-bottom: 1.5rem;
+    }
+
+    .doctor-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .doc-avatar {
+      width: 120px;
+      height: 120px;
+      background: linear-gradient(145deg, #cae9ff, #aad0e6);
+      border-radius: 50%;
+      margin: 1.5rem auto 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.2rem;
+      color: #005f73;
+    }
+
+    .doctor-card h4 {
+      font-size: 1.3rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .speciality {
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+    }
+
+    /* Testimonials */
+    .testimonials-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      justify-content: center;
+    }
+
+    .testimonial-card {
+      background: var(--white);
+      border-radius: 1.5rem;
+      padding: 2rem;
+      flex: 1;
+      min-width: 260px;
+      box-shadow: var(--shadow-md);
+      border: 1px solid #eef2f5;
+      transition: all 0.2s;
+    }
+
+    .testimonial-card p {
+      font-style: italic;
+      margin-bottom: 1rem;
+      color: #2c3e44;
+    }
+
+    .patient-name {
+      font-weight: 700;
+      margin-top: 0.5rem;
+      color: var(--primary-dark);
+    }
+
+    /* Contact section */
+    .contact-flex {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      background: var(--primary-light);
+      border-radius: 2rem;
+      padding: 2rem;
+      margin-top: 2rem;
+    }
+
+    .contact-info {
+      flex: 1;
+    }
+
+    .contact-info h3 {
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+    }
+
+    .contact-detail {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 1.2rem 0;
+    }
+
+    /* footer */
+    footer {
+      background-color: #003049;
+      color: #cddfe7;
+      padding: 3rem 0 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 2rem;
+    }
+
+    .footer-col h4 {
+      color: white;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+    }
+
+    .footer-col ul {
+      list-style: none;
+    }
+
+    .footer-col li {
+      margin-bottom: 0.6rem;
+    }
+
+    .footer-col a {
+      color: #bbd4e3;
+      text-decoration: none;
+      transition: 0.2s;
+    }
+
+    .footer-col a:hover {
+      color: white;
+      text-decoration: underline;
+    }
+
+    .copyright {
+      text-align: center;
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #1e5369;
+      font-size: 0.8rem;
+    }
+
+    /* responsive */
+    @media (max-width: 800px) {
+      .navbar {
+        flex-direction: column;
+        text-align: center;
+      }
+      .nav-links ul {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+      }
+      .hero-content h1 {
+        font-size: 2.2rem;
+      }
+      .hero-stats {
+        grid-template-columns: 1fr 1fr;
+      }
+      .hero-content p {
+        max-width: 100%;
+      }
+      .section-title {
+        font-size: 1.8rem;
+      }
+      .top-bar .container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 550px) {
+      .hero-stats {
+        grid-template-columns: 1fr;
+      }
+      .container {
+        padding: 0 1.2rem;
+      }
+    }
+
+    /* animation */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(15px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .service-card, .dept-item, .doctor-card, .testimonial-card {
+      animation: fadeInUp 0.4s ease-out forwards;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Emergency Bar -->
+  <div class="top-bar">
+    <div class="container">
+      <div class="emergency-contact">
+        🚨 24/7 EMERGENCY
+        <span>+1 (888) 570-4321</span>
+      </div>
+      <div class="hospital-hours">
+        <span>🕒 Visiting Hours: 10AM - 8PM</span>
+        <span>📅 Online Appointment Available</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Navigation -->
+  <header class="main-header">
+    <div class="container navbar">
+      <div class="logo">
+        <h1>🏥 HealWell</h1>
+        <p>Integrated Hospital Management</p>
+      </div>
+      <div class="nav-links">
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">Departments</a></li>
+          <li><a href="#">Doctors</a></li>
+          <li><a href="#">Services</a></li>
+          <li><a href="#">Patient Portal</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <button class="appointment-btn" onclick="alert('📞 Contact us at +1 (888) 570-4321 for appointments')">📋 Book Appointment</button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <div class="hero-badge">✨ Advanced Healthcare Management</div>
+        <h1>Compassionate Care, <br>Smart Management</h1>
+        <p>HealWell integrates cutting-edge hospital administration with patient-first approach. Access records, schedule visits, and manage treatments seamlessly.</p>
+        <div class="hero-buttons">
+          <a href="#" class="btn-primary">Find a Doctor →</a>
+          <a href="#" class="btn-outline">Virtual Consultation</a>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item"><h3>150+</h3><p>Expert Doctors</p></div>
+        <div class="stat-item"><h3>24/7</h3><p>Emergency Care</p></div>
+        <div class="stat-item"><h3>10k+</h3><p>Happy Patients</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services Section -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Our Medical Services</h2>
+      <p class="section-sub">Patient-centered excellence with modern facilities & digital management systems</p>
+      <div class="cards-grid">
+        <div class="service-card"><div class="icon-emoji">🚑</div><h3>Emergency Care</h3><p>Rapid response team & trauma center open 24/7.</p></div>
+        <div class="service-card"><div class="icon-emoji">🩺</div><h3>OPD Services</h3><p>Smart scheduling & digital health records for outpatients.</p></div>
+        <div class="service-card"><div class="icon-emoji">🏥</div><h3>Inpatient Mgmt</h3><p>Bed allocation, nursing care & real-time updates.</p></div>
+        <div class="service-card"><div class="icon-emoji">🔬</div><h3>Diagnostics</h3><p>Advanced lab, imaging & AI-assisted reporting.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Departments -->
+  <section class="section" style="background: var(--gray-100);">
+    <div class="container">
+      <h2 class="section-title">Specialized Departments</h2>
+      <p class="section-sub">State-of-the-art infrastructure & internationally trained teams</p>
+      <div class="dept-grid">
+        <div class="dept-item">❤️ Cardiology</div>
+        <div class="dept-item">🧠 Neurology</div>
+        <div class="dept-item">👶 Pediatrics</div>
+        <div class="dept-item">🦴 Orthopedics</div>
+        <div class="dept-item">🤰 Gynecology</div>
+        <div class="dept-item">🫁 Pulmonology</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Leading Doctors -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Meet Our Specialists</h2>
+      <p class="section-sub">Leadership in clinical excellence & hospital management</p>
+      <div class="doctors-grid">
+        <div class="doctor-card">
+          <div class="doc-avatar">👩‍⚕️</div>
+          <h4>Dr. Sarah Mitchell</h4>
+          <div class="speciality">Chief of Cardiology</div>
+          <p>15+ years experience, interventional cardiology</p>
+        </div>
+        <div class="doctor-card">
+          <div class="doc-avatar">👨‍⚕️</div>
+          <h4>Dr. James Carter</h4>
+          <div class="speciality">Head of Neurology</div>
+          <p>Stroke management & neurocritical care</p>
+        </div>
+        <div class="doctor-card">
+          <div class="doc-avatar">👩‍⚕️</div>
+          <h4>Dr. Priya Sharma</h4>
+          <div class="speciality">Medical Director</div>
+          <p>Healthcare administration & patient safety</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="section" style="background: linear-gradient(120deg, #fafeff, #ffffff);">
+    <div class="container">
+      <h2 class="section-title">Patient Stories</h2>
+      <p class="section-sub">Trusted by thousands and managed with care</p>
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <p>“The digital management made my surgery seamless. HealWell’s team updated my family at every step. Excellent hospital!”</p>
+          <div class="patient-name">— Linda Thompson</div>
+        </div>
+        <div class="testimonial-card">
+          <p>“From appointment to discharge, everything was well organized. The hospital management system is truly modern.”</p>
+          <div class="patient-name">— Robert Hayes</div>
+        </div>
+        <div class="testimonial-card">
+          <p>“Emergency care was super fast. Grateful for the doctors & integrated pharmacy. Highly recommended.”</p>
+          <div class="patient-name">— Maria Gonzalez</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact & Management Info -->
+  <section class="section">
+    <div class="container">
+      <div class="contact-flex">
+        <div class="contact-info">
+          <h3>📞 Hospital Management Contact</h3>
+          <p>For patient queries, feedback & medical records</p>
+          <div class="contact-detail">📍 215 Health Avenue, MedCity, CA 90210</div>
+          <div class="contact-detail">📧 care@healwellhospital.com</div>
+          <div class="contact-detail">📞 Main Reception: +1 (415) 786 2930</div>
+          <div class="contact-detail">🕒 Admin Support: 8AM - 8PM (Mon-Sat)</div>
+        </div>
+        <div style="flex: 1; background: white; border-radius: 1.5rem; padding: 1.5rem; text-align: center; box-shadow: var(--shadow-sm);">
+          <h3 style="margin-bottom: 1rem;">📋 Management Dashboard</h3>
+          <p style="margin-bottom: 0.8rem;">Real-time bed availability, staff scheduling & digital health records.</p>
+          <a href="#" style="color: var(--primary); font-weight: bold;">Secure Login →</a>
+          <hr style="margin: 1rem 0;">
+          <p><strong>⚕️ Emergency Helpline:</strong> 911 / 108</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h4>🏥 HealWell</h4>
+          <p>Integrated hospital management system for superior patient care & operational efficiency.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="#">Find a Doctor</a></li>
+            <li><a href="#">Medical Records</a></li>
+            <li><a href="#">Health Checkup</a></li>
+            <li><a href="#">Insurance Partners</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="#">Career at HealWell</a></li>
+            <li><a href="#">Hospital Policies</a></li>
+            <li><a href="#">Telemedicine Guide</a></li>
+            <li><a href="#">Feedback</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Follow Us</h4>
+          <ul>
+            <li>📘 Facebook</li>
+            <li>🐦 Twitter</li>
+            <li>📸 Instagram</li>
+            <li>💼 LinkedIn</li>
+          </ul>
+        </div>
+      </div>
+      <div class="copyright">
+        © 2026 HealWell Hospital Management System | Compassion. Innovation. Excellence.
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
