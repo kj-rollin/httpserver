@@ -11,10 +11,8 @@
 #include <iostream>
 
 void handle_client(int client_fd, AppContext& ctx, Router& router) {
-    char buffer[4096] = {0};
-    recv(client_fd, buffer, sizeof(buffer), 0);
 
-    std::string request = buffer;
+    std::string request = read_full_request(client_fd);  // ← new!
     std::string method  = extract_method(request);
     std::string path    = extract_path(request);
     std::string ip      = get_client_ip(client_fd);
@@ -37,6 +35,7 @@ int main() {
     router.add("POST", "/login",         handle_login_post);
     router.add("GET",  "/logout",        handle_logout);
     router.add("POST", "/register", handle_register_post);
+    router.add("POST", "/upload", handle_upload_post);
 
     // socket setup
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);

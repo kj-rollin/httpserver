@@ -49,6 +49,20 @@ std::string extract_cookie(const std::string& request,
            : request.substr(start, end - start);
 }
 
+std::string extract_boundary(const std::string& request) {
+    size_t pos = request.find("boundary=");
+    if (pos == std::string::npos) return "";
+    
+    // Start extracting after "boundary="
+    size_t start = pos + 9;  // length of "boundary=" is 9 characters
+    
+    // Find where the boundary value ends (at \r\n or end of string)
+    size_t end = request.find("\r\n", start);
+    
+    // Extract everything from start to end (or to end of string if no \r\n found)
+    return request.substr(start, end - start);
+}
+
 // parse body into map
 std::map<std::string, std::string> parse_body(const std::string& body) {
     std::map<std::string, std::string> result;
@@ -132,4 +146,39 @@ void log_request(const std::string& ip,
     std::cout.flush();
     std::ofstream log_file("server.log", std::ios::app);
     if (log_file.is_open()) log_file << line << "\n";
+}
+
+std::string read_full_request(int client_fd) {
+    std::string request;
+    char buffer[4096];
+
+    // step 1 — read until we have headers (find \r\n\r\n)
+    size_t header_end;
+    while ((header_end = request.find("\r\n\r\n")) == std::string::npos) {
+        int bytes = recv(client_fd, buffer, sizeof(buffer), 0);
+        if (bytes <= 0) return request;  // connection closed
+        request.append(buffer, bytes);
+    }
+
+    // step 2 — extract Content-Length
+    size_t cl_pos = request.find("Content-Length: ");
+    long content_length = 0;
+    if (cl_pos != std::string::npos) {
+        size_t cl_start = cl_pos + 17;  // skip "Content-Length: "
+        size_t cl_end   = request.find("\r\n", cl_start);
+        content_length  = std::stol(request.substr(cl_start, cl_end - cl_start));
+    }
+
+    // step 3 — keep reading until we have content_length bytes of body
+    size_t body_start = header_end + 4;
+    size_t body_received = request.size() - body_start;
+
+    while ((long)body_received < content_length) {
+        int bytes = recv(client_fd, buffer, sizeof(buffer), 0);
+        if (bytes <= 0) break;
+        request.append(buffer, bytes);
+        body_received += bytes;
+    }
+
+    return request;
 }

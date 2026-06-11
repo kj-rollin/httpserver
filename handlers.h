@@ -2,6 +2,7 @@
 #pragma once
 #include "router.h"
 #include "utils.h"
+#include "multipart.h"
 
 
 // ─── login page ───────────────────────────
@@ -50,6 +51,46 @@ void handle_login_post(const std::string& request,
     }
 }
 
+void handle_upload_post(const std::string& request,
+                        int client_fd,
+                        AppContext& ctx) {
+    // get boundary from header
+    std::string boundary = extract_boundary(request);
+    if (boundary.empty()) {
+        std::string response = 
+            "HTTP/1.1 400 Bad Request\r\n\r\n<h1>No boundary found</h1>";
+        send(client_fd, response.c_str(), response.size(), 0);
+        return;
+    }
+
+    // get body
+    std::string body = extract_body(request);
+
+    // parse files
+    auto files = parse_multipart(body, boundary);
+
+    // save each file
+    std::string uploads_dir = 
+        std::filesystem::current_path().string() + "/uploads";
+    std::filesystem::create_directory(uploads_dir);
+
+    for (auto& file : files) {
+        std::string path = uploads_dir + "/" + file.filename;
+        std::ofstream out(path, std::ios::binary);
+        out.write(file.data.c_str(), file.data.size());
+        out.close();
+    }
+
+    std::string response_body = 
+        "<h1>Uploaded " + std::to_string(files.size()) + " file(s)!</h1>";
+
+    std::string response =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/html\r\n"
+        "\r\n" + response_body;
+
+    send(client_fd, response.c_str(), response.size(), 0);
+}
 // ─── logout ───────────────────────────────
 void handle_logout(const std::string& request,
                    int client_fd,
