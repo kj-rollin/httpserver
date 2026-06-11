@@ -17,6 +17,11 @@ std::string extract_path(const std::string& request) {
     std::istringstream stream(request);
     std::string method, path;
     stream >> method >> path;
+    
+    // strip query string
+    size_t query_pos = path.find('?');
+    if (query_pos != std::string::npos)
+        path = path.substr(0, query_pos);
     if (path == "/") path = "/index.html";
     return path;
 }

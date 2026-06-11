@@ -3,7 +3,16 @@
 <head><title>Dashboard</title></head>
 <body>
     <h1>Welcome to HealWell Dashboard! 🏥</h1>
-    <p>You are logged in!</p>
+    <p>You are logged in as: {{USERNAME}}</p>
+
+    <h2>Submit Job Application</h2>
+    <form method="POST" action="/upload" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{CSRF_TOKEN}}">
+        <input type="file" name="file"><br><br>
+        <button type="submit">Upload Resume</button>
+    </form>
+
+    <br>
     <a href="/logout">Logout</a>
 </body>
 </html>

@@ -5,6 +5,7 @@
 #include <string>
 #include <stdexcept>
 #include "crypto.h"
+#include <ctime>
 
 class Database {
    private:
@@ -87,4 +88,34 @@ class Database {
         sqlite3_finalize(stmt);
         return valid;
     }
+    
+     bool save_application(const std::string& username,
+                      const std::string& filename,
+                      const std::string& filepath) {
+     std::lock_guard<std::mutex> lock(db_mutex);
+
+    // 1. get current time — same format as log_request
+     std::time_t now = std::time(nullptr);
+      char time_buf[20];
+     std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
+      std::string time_str = time_buf;
+
+     // 2-4 — your code is perfect, keep as is!
+     sqlite3_stmt* stmt;
+      const char* sql = "INSERT INTO job_applications (username, filename, filepath, upload_time) VALUES (?, ?, ?, ?)";
+    
+      if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;
+     }
+
+     sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
+      sqlite3_bind_text(stmt, 2, filename.c_str(), -1, SQLITE_STATIC);
+     sqlite3_bind_text(stmt, 3, filepath.c_str(), -1, SQLITE_STATIC);
+     sqlite3_bind_text(stmt, 4, time_str.c_str(), -1, SQLITE_STATIC);
+
+     bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+     sqlite3_finalize(stmt);
+    
+     return success;
+     }
 };

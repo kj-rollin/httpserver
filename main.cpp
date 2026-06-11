@@ -33,9 +33,11 @@ int main() {
     Router router(ctx);
     router.add("GET",  "/login.html",    handle_login_page);
     router.add("POST", "/login",         handle_login_post);
+    router.add("POST", "/api/login", handle_api_login);
     router.add("GET",  "/logout",        handle_logout);
     router.add("POST", "/register", handle_register_post);
     router.add("POST", "/upload", handle_upload_post);
+    router.add("GET", "/dashboard.html", require_auth(handle_dashboard));
 
     // socket setup
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);

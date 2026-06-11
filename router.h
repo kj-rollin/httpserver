@@ -18,6 +18,23 @@ using Handler = std::function<void(
     AppContext&
 )>;
 
+// wraps a handler with login check
+Handler require_auth(Handler handler) {
+    return [handler](const std::string& request, int client_fd, AppContext& ctx) {
+        std::string token    = extract_cookie(request, "session");
+        std::string username = ctx.sessions->validate(token);
+
+        if (username.empty()) {
+            std::string response =
+                "HTTP/1.1 302 Found\r\nLocation: /login.html\r\n\r\n";
+            send(client_fd, response.c_str(), response.size(), 0);
+            return;
+        }
+
+        handler(request, client_fd, ctx);
+    };
+}
+
 class Router {
 private:
     std::map<std::string, Handler> routes;

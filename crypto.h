@@ -4,6 +4,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <random>
 
 // convert bytes to hex string
 std::string to_hex(const unsigned char* data, size_t len) {
@@ -71,4 +72,20 @@ bool verify_password(const std::string& password,
     
     // 4. compare results (using constant-time comparison to prevent timing attacks)
     return computed_hash == stored_hash;
+}
+
+// generate random hex token — used for sessions AND unique filenames
+std::string generate_token() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 15);
+    
+    const char* hex_chars = "0123456789abcdef";
+    std::string token;
+    token.reserve(32);  // shorter for filenames
+    
+    for (int i = 0; i < 32; ++i) {
+        token += hex_chars[dis(gen)];
+    }
+    return token;
 }

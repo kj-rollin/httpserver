@@ -11,6 +11,7 @@
 struct Session {
     std::string username;
     std::time_t last_seen;
+    std::string csrf_token;
 };
 
 class SessionManager {
@@ -48,7 +49,8 @@ public:
         std::lock_guard<std::mutex> lock(sessions_mutex);
         
         std::string token = generate_token();
-        Session session{username, std::time(nullptr)};
+        std::string csrf = generate_token();
+        Session session{username, std::time(nullptr), csrf};
         sessions[token] = session;
         
         return token;
@@ -71,6 +73,22 @@ public:
         // update last_seen
         it->second.last_seen = std::time(nullptr);
         return it->second.username;
+    }
+
+    // get CSRF token for a session
+    std::string get_csrf(const std::string& token) {
+        std::lock_guard<std::mutex> lock(sessions_mutex);
+        auto it = sessions.find(token);
+        if (it == sessions.end()) return "";
+        return it->second.csrf_token;
+    }
+
+    // verify CSRF token matches
+    bool verify_csrf(const std::string& session_token, const std::string& csrf) {
+        std::lock_guard<std::mutex> lock(sessions_mutex);
+        auto it = sessions.find(session_token);
+        if (it == sessions.end()) return false;
+        return it->second.csrf_token == csrf;
     }
 
     // delete session on logout

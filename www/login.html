@@ -5,10 +5,28 @@
 </head>
 <body>
     <h1>Login</h1>
+    <div id="message" style="font-weight:bold;"></div>
     <form method="POST" action="/login">
         <input type="text" name="username" placeholder="Username"><br><br>
         <input type="password" name="password" placeholder="Password"><br><br>
         <button type="submit">Login</button>
     </form>
+    <a href="/register.html">Don't have an account? Register</a>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const msgDiv = document.getElementById("message");
+
+        if (params.get("registered") === "1") {
+            msgDiv.style.color = "green";
+            msgDiv.textContent = "Registration successful! Please login.";
+        } else if (params.get("error") === "1") {
+            msgDiv.style.color = "red";
+            msgDiv.textContent = "Invalid username or password.";
+        } else if (params.get("error") === "2") {
+            msgDiv.style.color = "red";
+            msgDiv.textContent = "Username already taken.";
+        }
+    </script>
 </body>
 </html>
