@@ -26,7 +26,8 @@ int main() {
     // setup shared resources
     AppContext ctx {
         std::make_shared<Database>("database.db"),
-        std::make_shared<SessionManager>()
+        std::make_shared<SessionManager>(),
+        std::make_shared<FileCache>()
     };
 
     // register routes
@@ -38,6 +39,9 @@ int main() {
     router.add("POST", "/register", handle_register_post);
     router.add("POST", "/upload", handle_upload_post);
     router.add("GET", "/dashboard.html", require_auth(handle_dashboard));
+    router.add("GET", "/api/dashboard", handle_api_dashboard);
+    router.add("GET", "/api/applications", handle_api_applications);
+    router.add("GET", "/health", handle_health);
 
     // socket setup
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);

@@ -1,4 +1,5 @@
 #pragma once
+#include "cache.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -186,4 +187,26 @@ std::string read_full_request(int client_fd) {
     }
 
     return request;
+}
+
+// cached version — for static files (CSS/JS/images)
+void serve_file_cached(const std::string& path, int client_fd, FileCache& cache) {
+    std::string full_path =
+        std::filesystem::current_path().string() + "/www" + path;
+
+    std::string content = cache.get(full_path);
+
+    if (!content.empty()) {
+        std::string response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: " + detect_content_type(path) +
+            "; charset=utf-8\r\n\r\n" + content;
+        send(client_fd, response.c_str(), response.size(), 0);
+    } else {
+        std::string not_found =
+            "HTTP/1.1 404 Not Found\r\n"
+            "Content-Type: text/html\r\n\r\n"
+            "<h1>404 Not Found</h1>";
+        send(client_fd, not_found.c_str(), not_found.size(), 0);
+    }
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "utils.h"
+#include "cache.h"
 #include "database.h"
 #include "session.h"
 #include <functional>
@@ -7,10 +8,16 @@
 #include <string>
 #include <memory>
 
+// forward declaration — defined in handlers.h
+
 struct AppContext {
     std::shared_ptr<Database>       db;
     std::shared_ptr<SessionManager> sessions;
+    std::shared_ptr<FileCache>       cache;
 };
+
+// defined in handlers.h
+void handle_api_delete_application(const std::string& request, int client_fd, AppContext& ctx, const std::string& path);
 
 using Handler = std::function<void(
     const std::string&,
@@ -41,7 +48,7 @@ private:
     AppContext& ctx;
 
     void serve_static(const std::string& path, int client_fd) {
-        serve_file(path, client_fd);
+        serve_file_cached(path, client_fd, *ctx.cache);
     }
 
 public:
@@ -57,6 +64,12 @@ public:
                   const std::string& method,
                   const std::string& path,
                   int client_fd) {
+        // dynamic route — DELETE /api/applications/<id>
+        if (method == "DELETE" && path.find("/api/applications/") == 0) {
+            handle_api_delete_application(request, client_fd, ctx, path);
+            return;
+        }
+
         std::string key = method + " " + path;
         auto it = routes.find(key);
         if (it != routes.end()) {

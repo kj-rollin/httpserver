@@ -261,3 +261,109 @@ void handle_api_login(const std::string& request,
 
     send(client_fd, response.c_str(), response.size(), 0);
 }
+
+void handle_api_dashboard(const std::string& request,
+                          int client_fd,
+                          AppContext& ctx) {
+    std::string token    = extract_cookie(request, "session");
+    std::string username = ctx.sessions->validate(token);
+
+    if (username.empty()) {
+        std::string json = "{\"error\":\"Not authenticated\"}";
+        std::string response =
+            "HTTP/1.1 401 Unauthorized\r\n"
+            "Content-Type: application/json\r\n\r\n" + json;
+        send(client_fd, response.c_str(), response.size(), 0);
+        return;
+    }
+
+    std::string csrf = ctx.sessions->get_csrf(token);
+
+    std::string json = 
+        "{\"username\":\"" + json_escape(username) + "\","
+        "\"csrf_token\":\"" + json_escape(csrf) + "\"}";
+
+    std::string response =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: application/json\r\n\r\n" + json;
+
+    send(client_fd, response.c_str(), response.size(), 0);
+}
+
+void handle_api_applications(const std::string& request,
+                             int client_fd,
+                             AppContext& ctx) {
+    std::string token    = extract_cookie(request, "session");
+    std::string username = ctx.sessions->validate(token);
+
+    if (username.empty()) {
+        std::string json = "{\"error\":\"Not authenticated\"}";
+        std::string response =
+            "HTTP/1.1 401 Unauthorized\r\n"
+            "Content-Type: application/json\r\n\r\n" + json;
+        send(client_fd, response.c_str(), response.size(), 0);
+        return;
+    }
+
+    auto apps = ctx.db->get_applications(username);
+
+    std::string json = "[";
+    for (size_t i = 0; i < apps.size(); i++) {
+        if (i > 0) json += ",";
+        json += "{\"id\":" + apps[i]["id"] + ","
+                "\"filename\":\"" + json_escape(apps[i]["filename"]) + "\","
+                "\"upload_time\":\"" + json_escape(apps[i]["upload_time"]) + "\","
+                "\"status\":\"" + json_escape(apps[i]["status"]) + "\"}";
+    }
+    json += "]";
+
+    std::string response =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: application/json\r\n\r\n" + json;
+
+    send(client_fd, response.c_str(), response.size(), 0);
+}
+
+void handle_api_delete_application(const std::string& request,
+                                   int client_fd,
+                                   AppContext& ctx,
+                                   const std::string& path) {
+    std::string token    = extract_cookie(request, "session");
+    std::string username = ctx.sessions->validate(token);
+
+    if (username.empty()) {
+        std::string json = "{\"error\":\"Not authenticated\"}";
+        std::string response =
+            "HTTP/1.1 401 Unauthorized\r\n"
+            "Content-Type: application/json\r\n\r\n" + json;
+        send(client_fd, response.c_str(), response.size(), 0);
+        return;
+    }
+
+    size_t last_slash = path.rfind('/');
+    std::string id_str = path.substr(last_slash + 1);
+
+    bool success = ctx.db->delete_application(username, id_str);
+
+    std::string json = success 
+        ? "{\"success\":true}" 
+        : "{\"success\":false,\"error\":\"Not found or not yours\"}";
+
+    std::string response =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: application/json\r\n\r\n" + json;
+
+    send(client_fd, response.c_str(), response.size(), 0);
+}
+
+void handle_health(const std::string& request,
+                   int client_fd,
+                   AppContext& ctx) {
+    std::string json = "{\"status\":\"ok\"}";
+
+    std::string response =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: application/json\r\n\r\n" + json;
+
+    send(client_fd, response.c_str(), response.size(), 0);
+}

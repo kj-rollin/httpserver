@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include "crypto.h"
 #include <ctime>
+#include <map>
 
 class Database {
    private:
@@ -118,4 +119,53 @@ class Database {
     
      return success;
      }
+
+    bool delete_application(const std::string& username, 
+                            const std::string& id) {
+        std::lock_guard<std::mutex> lock(db_mutex);
+        
+        int application_id = std::stoi(id);
+        
+        const char* sql = "DELETE FROM job_applications WHERE id = ? AND username = ?";
+        
+        sqlite3_stmt* stmt;
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+            return false;
+        }
+        
+        sqlite3_bind_int(stmt, 1, application_id);
+        sqlite3_bind_text(stmt, 2, username.c_str(), -1, SQLITE_STATIC);
+        
+        bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+        sqlite3_finalize(stmt);
+        
+        int changes = sqlite3_changes(db);
+        return success && changes > 0;
+    }
+
+    std::vector<std::map<std::string, std::string>> 
+    get_applications(const std::string& username) {
+        std::lock_guard<std::mutex> lock(db_mutex);
+        
+        std::vector<std::map<std::string, std::string>> results;
+        
+        std::string sql = "SELECT id, filename, upload_time, status "
+                          "FROM job_applications WHERE username = ?;";
+        sqlite3_stmt* stmt = nullptr;
+        
+        sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+        sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
+        
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            std::map<std::string, std::string> row;
+            row["id"]          = std::to_string(sqlite3_column_int(stmt, 0));
+            row["filename"]    = (const char*)sqlite3_column_text(stmt, 1);
+            row["upload_time"] = (const char*)sqlite3_column_text(stmt, 2);
+            row["status"]      = (const char*)sqlite3_column_text(stmt, 3);
+            results.push_back(row);
+        }
+        
+        sqlite3_finalize(stmt);
+        return results;
+    }
 };
