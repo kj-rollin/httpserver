@@ -116,6 +116,19 @@ std::string read_file(const std::string& path) {
         std::istreambuf_iterator<char>(file), {});
 }
 
+// build 404 response — uses custom www/404.html if it exists
+std::string build_404_response() {
+    std::string custom_path = std::filesystem::current_path().string() + "/www/404.html";
+    std::string custom_content = read_file(custom_path);
+
+    std::string body = !custom_content.empty() 
+        ? custom_content 
+        : "<h1>404 Not Found</h1>";
+
+    return "HTTP/1.1 404 Not Found\r\n"
+           "Content-Type: text/html; charset=utf-8\r\n\r\n" + body;
+}
+
 // serve static file
 void serve_file(const std::string& path, int client_fd) {
     std::string full_path = 
@@ -128,10 +141,7 @@ void serve_file(const std::string& path, int client_fd) {
             "; charset=utf-8\r\n\r\n" + content;
         send(client_fd, response.c_str(), response.size(), 0);
     } else {
-        std::string not_found =
-            "HTTP/1.1 404 Not Found\r\n"
-            "Content-Type: text/html\r\n\r\n"
-            "<h1>404 Not Found</h1>";
+        std::string not_found = build_404_response();
         send(client_fd, not_found.c_str(), not_found.size(), 0);
     }
 }
@@ -190,23 +200,25 @@ std::string read_full_request(int client_fd) {
 }
 
 // cached version — for static files (CSS/JS/images)
-void serve_file_cached(const std::string& path, int client_fd, FileCache& cache) {
+void serve_file_cached(const std::string& path, int client_fd, FileCache& cache, const std::string& request) {
     std::string full_path =
         std::filesystem::current_path().string() + "/www" + path;
 
-    std::string content = cache.get(full_path);
+    bool accepts_gzip = request.find("Accept-Encoding:") != std::string::npos &&
+                         request.find("gzip") != std::string::npos;
+
+    auto [content, is_compressed] = cache.get(full_path, accepts_gzip);
 
     if (!content.empty()) {
+        std::string encoding_header = is_compressed ? "Content-Encoding: gzip\r\n" : "";
         std::string response =
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: " + detect_content_type(path) +
-            "; charset=utf-8\r\n\r\n" + content;
+            "; charset=utf-8\r\n" + encoding_header + "\r\n";
         send(client_fd, response.c_str(), response.size(), 0);
+        send(client_fd, content.c_str(), content.size(), 0);
     } else {
-        std::string not_found =
-            "HTTP/1.1 404 Not Found\r\n"
-            "Content-Type: text/html\r\n\r\n"
-            "<h1>404 Not Found</h1>";
+        std::string not_found = build_404_response();
         send(client_fd, not_found.c_str(), not_found.size(), 0);
     }
 }

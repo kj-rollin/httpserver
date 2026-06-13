@@ -1,18 +1,30 @@
-// main.cpp — correct order
 #include "utils.h"
 #include "database.h"
 #include "session.h"
 #include "router.h"
-#include "handlers.h"    // ← must be last!
+#include "handlers.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <thread>
 #include <iostream>
+#include <atomic>
+#include <csignal>
+#include <chrono>
+
+std::atomic<bool> running(true);
+std::atomic<int>  active_requests(0);
+int server_fd;
+
+void handle_signal(int sig) {
+    running = false;
+    close(server_fd);
+}
 
 void handle_client(int client_fd, AppContext& ctx, Router& router) {
+    active_requests++;
 
-    std::string request = read_full_request(client_fd);  // ← new!
+    std::string request = read_full_request(client_fd);
     std::string method  = extract_method(request);
     std::string path    = extract_path(request);
     std::string ip      = get_client_ip(client_fd);
@@ -20,17 +32,20 @@ void handle_client(int client_fd, AppContext& ctx, Router& router) {
     log_request(ip, method, path, 200);
     router.dispatch(request, method, path, client_fd);
     close(client_fd);
+
+    active_requests--;
 }
 
 int main() {
-    // setup shared resources
+    signal(SIGINT, handle_signal);
+    signal(SIGTERM, handle_signal);
+
     AppContext ctx {
         std::make_shared<Database>("database.db"),
         std::make_shared<SessionManager>(),
         std::make_shared<FileCache>()
     };
 
-    // register routes
     Router router(ctx);
     router.add("GET",  "/login.html",    handle_login_page);
     router.add("POST", "/login",         handle_login_post);
@@ -43,8 +58,7 @@ int main() {
     router.add("GET", "/api/applications", handle_api_applications);
     router.add("GET", "/health", handle_health);
 
-    // socket setup
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
     sockaddr_in address{};
     address.sin_family      = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
@@ -55,10 +69,31 @@ int main() {
     std::cout << "Server running on http://localhost:8080\n";
     std::cout.flush();
 
-    while (true) {
+    while (running) {
         int client_fd = accept(server_fd, nullptr, nullptr);
+        if (client_fd < 0) break;
+
         std::thread([client_fd, &ctx, &router]() {
             handle_client(client_fd, ctx, router);
         }).detach();
     }
+
+    std::cout << "\nShutting down... waiting for " << active_requests << " active request(s)\n";
+    std::cout.flush();
+
+    auto start = std::chrono::steady_clock::now();
+    const int TIMEOUT_SECONDS = 10;
+
+    while (active_requests > 0) {
+        auto elapsed = std::chrono::steady_clock::now() - start;
+        if (elapsed > std::chrono::seconds(TIMEOUT_SECONDS)) {
+            std::cout << "Timeout — forcing shutdown with " 
+                      << active_requests << " request(s) still active\n";
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    std::cout << "Shutdown complete ✅\n";
+    return 0;
 }

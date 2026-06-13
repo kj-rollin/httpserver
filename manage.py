@@ -14,6 +14,7 @@ BUILD_CMD = [
     "-lsqlite3",
     "-lssl",
     "-lcrypto",
+    "-lz",
     "-o",
     "mainserver"
 ]

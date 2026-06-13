@@ -14,3 +14,15 @@ std::string json_escape(const std::string& input) {
     }
     return output;
 }
+
+// extract a string field value from simple JSON: {"field":"value"}
+std::string extract_json_field(const std::string& json, const std::string& field) {
+    std::string search = "\"" + field + "\":\"";
+    size_t pos = json.find(search);
+    if (pos == std::string::npos) return "";
+
+    size_t start = pos + search.size();
+    size_t end   = json.find("\"", start);
+
+    return json.substr(start, end - start);
+}

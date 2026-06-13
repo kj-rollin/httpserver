@@ -168,4 +168,50 @@ class Database {
         sqlite3_finalize(stmt);
         return results;
     }
+
+    bool update_application_status(const std::string& id, 
+                                   const std::string& new_status) {
+        std::lock_guard<std::mutex> lock(db_mutex);
+
+        const char* sql = "UPDATE job_applications SET status = ? WHERE id = ?";
+
+        sqlite3_stmt* stmt;
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+            return false;
+        }
+
+        sqlite3_bind_text(stmt, 1, new_status.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 2, std::stoi(id));
+
+        bool success = (sqlite3_step(stmt) == SQLITE_DONE);
+        sqlite3_finalize(stmt);
+
+        int changes = sqlite3_changes(db);
+        return success && changes > 0;
+    }
+
+    bool is_admin(const std::string& username) {
+        std::lock_guard<std::mutex> lock(db_mutex);
+        
+        const char* sql = "SELECT role FROM users WHERE username = ?";
+        
+        sqlite3_stmt* stmt;
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) != SQLITE_OK) {
+            return false;
+        }
+        
+        sqlite3_bind_text(stmt, 1, username.c_str(), -1, SQLITE_STATIC);
+        
+        bool is_admin_result = false;
+        
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            std::string role = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            if (role == "admin") {
+                is_admin_result = true;
+            }
+        }
+        
+        sqlite3_finalize(stmt);
+        return is_admin_result;
+    }
 };

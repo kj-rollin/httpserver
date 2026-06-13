@@ -18,6 +18,7 @@ struct AppContext {
 
 // defined in handlers.h
 void handle_api_delete_application(const std::string& request, int client_fd, AppContext& ctx, const std::string& path);
+void handle_api_update_application(const std::string& request, int client_fd, AppContext& ctx, const std::string& path);
 
 using Handler = std::function<void(
     const std::string&,
@@ -47,8 +48,8 @@ private:
     std::map<std::string, Handler> routes;
     AppContext& ctx;
 
-    void serve_static(const std::string& path, int client_fd) {
-        serve_file_cached(path, client_fd, *ctx.cache);
+    void serve_static(const std::string& path, int client_fd, const std::string& request) {
+        serve_file_cached(path, client_fd, *ctx.cache, request);
     }
 
 public:
@@ -70,12 +71,19 @@ public:
             return;
         }
 
+
+        // dynamic route — PUT /api/applications/<id>
+        if (method == "PUT" && path.find("/api/applications/") == 0) {
+            handle_api_update_application(request, client_fd, ctx, path);
+            return;
+        }
+
         std::string key = method + " " + path;
         auto it = routes.find(key);
         if (it != routes.end()) {
             it->second(request, client_fd, ctx);
         } else {
-            serve_static(path, client_fd);
+            serve_static(path, client_fd, request);
         }
     }
 };

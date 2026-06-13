@@ -367,3 +367,47 @@ void handle_health(const std::string& request,
 
     send(client_fd, response.c_str(), response.size(), 0);
 }
+
+void handle_api_update_application(const std::string& request,
+                                    int client_fd,
+                                    AppContext& ctx,
+                                    const std::string& path) {
+    std::string token    = extract_cookie(request, "session");
+    std::string username = ctx.sessions->validate(token);
+
+    if (username.empty() || !ctx.db->is_admin(username)) {
+        std::string json = "{\"error\":\"Admin access required\"}";
+        std::string response =
+            "HTTP/1.1 403 Forbidden\r\n"
+            "Content-Type: application/json\r\n\r\n" + json;
+        send(client_fd, response.c_str(), response.size(), 0);
+        return;
+    }
+
+    size_t last_slash = path.rfind('/');
+    std::string id = path.substr(last_slash + 1);
+
+    std::string body   = extract_body(request);
+    std::string status = extract_json_field(body, "status");
+
+    if (status.empty()) {
+        std::string json = "{\"error\":\"Missing status field\"}";
+        std::string response =
+            "HTTP/1.1 400 Bad Request\r\n"
+            "Content-Type: application/json\r\n\r\n" + json;
+        send(client_fd, response.c_str(), response.size(), 0);
+        return;
+    }
+
+    bool success = ctx.db->update_application_status(id, status);
+
+    std::string json = success
+        ? "{\"success\":true,\"status\":\"" + json_escape(status) + "\"}"
+        : "{\"success\":false,\"error\":\"Application not found\"}";
+
+    std::string response =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: application/json\r\n\r\n" + json;
+
+    send(client_fd, response.c_str(), response.size(), 0);
+}
