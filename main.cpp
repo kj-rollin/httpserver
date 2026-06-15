@@ -22,8 +22,15 @@ void handle_signal(int sig) {
     close(server_fd);
 }
 
+struct RequestGuard {
+    std::atomic<int>& counter;
+    int fd;
+    RequestGuard(std::atomic<int>& c, int f) : counter(c), fd(f) { counter++; }
+    ~RequestGuard() { counter--; close(fd); }
+};
+
 void handle_client(int client_fd, AppContext& ctx, Router& router) {
-    active_requests++;
+    RequestGuard guard(active_requests, client_fd);
 
     std::string request = read_full_request(client_fd);
     std::string method  = extract_method(request);
@@ -38,14 +45,11 @@ void handle_client(int client_fd, AppContext& ctx, Router& router) {
             "Retry-After: 60\r\n\r\n"
             "{\"error\":\"Too many requests, slow down!\"}";
         send(client_fd, response.c_str(), response.size(), 0);
-        close(client_fd);
-        active_requests--;
-        return;
+        return;  // guard handles close() and active_requests--
     }
 
     log_request(ip, method, path, 200);
     router.dispatch(request, method, path, client_fd);
-    close(client_fd);
 
     active_requests--;
 }
