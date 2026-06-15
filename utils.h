@@ -50,9 +50,12 @@ std::string extract_cookie(const std::string& request,
     if (pos == std::string::npos) return "";
     size_t start = pos + search.size();
     size_t end   = request.find(';', start);
-    return end == std::string::npos
-           ? request.substr(start, request.find("\r\n", start) - start)
-           : request.substr(start, end - start);
+    if (end == std::string::npos) {
+        size_t line_end = request.find("\r\n", start);
+        if (line_end == std::string::npos) return "";
+        return request.substr(start, line_end - start);
+    }
+    return request.substr(start, end - start);
 }
 
 std::string extract_boundary(const std::string& request) {
@@ -159,7 +162,7 @@ void log_request(const std::string& ip,
                        ip + " " + method + " " + path + " " +
                        std::to_string(status_code);
     std::cerr << line << "\n";
-    std::cout.flush();
+    std::cerr.flush();
     std::ofstream log_file("server.log", std::ios::app);
     if (log_file.is_open()) log_file << line << "\n";
 }

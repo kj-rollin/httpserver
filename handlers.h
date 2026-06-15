@@ -1,4 +1,5 @@
 // handlers.h
+#include <set>
 #include "json.h"
 #pragma once
 #include "router.h"
@@ -103,7 +104,14 @@ void handle_upload_post(const std::string& request,
     std::filesystem::create_directory(uploads_dir);
 
     for (auto& file : files) {
-        std::string unique_name = generate_token() + "_" + file.filename;
+        // sanitize filename
+        std::string safe_filename = file.filename;
+        safe_filename.erase(
+            std::remove_if(safe_filename.begin(), safe_filename.end(),
+                [](char c) { return c == 47 || c == 92 || c == 0; }),
+            safe_filename.end());
+        if (safe_filename.empty()) safe_filename = "unnamed";
+        std::string unique_name = generate_token() + "_" + safe_filename;
         std::string filepath    = uploads_dir + "/" + unique_name;
 
         std::ofstream out(filepath, std::ios::binary);
@@ -367,8 +375,10 @@ void handle_api_update_application(const std::string& request,
     std::string body   = extract_body(request);
     std::string status = extract_json_field(body, "status");
 
-    if (status.empty()) {
-        std::string json = "{\"error\":\"Missing status field\"}";
+    // whitelist valid statuses
+    std::set<std::string> valid_statuses = {"pending", "reviewed", "accepted", "rejected"};
+    if (status.empty() || valid_statuses.find(status) == valid_statuses.end()) {
+        std::string json = "{\"error\":\"Invalid or missing status field\"}";
         std::string response = json_response(400, "Bad Request", json);
         send(client_fd, response.c_str(), response.size(), 0);
         return;

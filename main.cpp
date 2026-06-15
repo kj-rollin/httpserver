@@ -69,8 +69,8 @@ int main() {
     router.add("POST", "/register", handle_register_post);
     router.add("POST", "/upload", handle_upload_post);
     router.add("GET", "/dashboard.html", require_auth(handle_dashboard));
-    router.add("GET", "/api/dashboard", handle_api_dashboard);
-    router.add("GET", "/api/applications", handle_api_applications);
+    router.add("GET", "/api/dashboard", require_auth(handle_api_dashboard));
+    router.add("GET", "/api/applications", require_auth(handle_api_applications));
     router.add("GET", "/health", handle_health);
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -78,8 +78,14 @@ int main() {
     address.sin_family      = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port        = htons(8080);
-    bind(server_fd, (sockaddr*)&address, sizeof(address));
-    listen(server_fd, 10);
+    if (bind(server_fd, (sockaddr*)&address, sizeof(address)) < 0) {
+        perror("bind failed");
+        return 1;
+    }
+    if (listen(server_fd, 10) < 0) {
+        perror("listen failed");
+        return 1;
+    }
 
     std::cout << "Server running on http://localhost:8080\n";
     std::cout.flush();
