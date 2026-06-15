@@ -1,5 +1,6 @@
 #pragma once
 #include "utils.h"
+#include "rate_limiter.h"
 #include "cache.h"
 #include "database.h"
 #include "session.h"
@@ -14,6 +15,7 @@ struct AppContext {
     std::shared_ptr<Database>       db;
     std::shared_ptr<SessionManager> sessions;
     std::shared_ptr<FileCache>       cache;
+    std::shared_ptr<RateLimiter>     rate_limiter;
 };
 
 // defined in handlers.h

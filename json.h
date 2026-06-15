@@ -26,3 +26,19 @@ std::string extract_json_field(const std::string& json, const std::string& field
 
     return json.substr(start, end - start);
 }
+
+// escape HTML special characters to prevent XSS
+std::string html_escape(const std::string& input) {
+    std::string output;
+    for (char c : input) {
+        switch (c) {
+            case '<':  output += "&lt;";   break;
+            case '>':  output += "&gt;";   break;
+            case '&':  output += "&amp;";  break;
+            case '"':  output += "&quot;"; break;
+            case '\'': output += "&#39;";  break;
+            default:   output += c;
+        }
+    }
+    return output;
+}

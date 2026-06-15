@@ -51,19 +51,22 @@ UploadedFile parse_part(const std::string& part) {
     if (fn_pos != std::string::npos) {
         size_t fn_start = fn_pos + 10;
         size_t fn_end   = headers.find("\"", fn_start);
-        file.filename = headers.substr(fn_start, fn_end - fn_start);
+        if (fn_end != std::string::npos) {
+            file.filename = headers.substr(fn_start, fn_end - fn_start);
+        }
     }
 
     size_t ct_pos = headers.find("Content-Type: ");
     if (ct_pos != std::string::npos) {
         size_t ct_start = ct_pos + 14;
         size_t ct_end   = headers.find("\r\n", ct_start);
-        file.content_type = headers.substr(ct_start, ct_end - ct_start);
+        if (ct_end != std::string::npos) {
+            file.content_type = headers.substr(ct_start, ct_end - ct_start);
+        }
     }
 
     if (data.size() >= 2 && data.substr(data.size()-2) == "\r\n")
         data = data.substr(0, data.size()-2);
-
     file.data = data;
     return file;
 }

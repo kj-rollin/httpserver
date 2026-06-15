@@ -124,7 +124,8 @@ class Database {
                             const std::string& id) {
         std::lock_guard<std::mutex> lock(db_mutex);
         
-        int application_id = std::stoi(id);
+        int application_id;
+        try { application_id = std::stoi(id); } catch (...) { return false; }
         
         const char* sql = "DELETE FROM job_applications WHERE id = ? AND username = ?";
         
@@ -181,7 +182,9 @@ class Database {
         }
 
         sqlite3_bind_text(stmt, 1, new_status.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 2, std::stoi(id));
+        int app_id;
+        try { app_id = std::stoi(id); } catch (...) { sqlite3_finalize(stmt); return false; }
+        sqlite3_bind_int(stmt, 2, app_id);
 
         bool success = (sqlite3_step(stmt) == SQLITE_DONE);
         sqlite3_finalize(stmt);

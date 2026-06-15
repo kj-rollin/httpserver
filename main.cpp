@@ -4,6 +4,7 @@
 #include "router.h"
 #include "handlers.h"
 #include <sys/socket.h>
+#include "threadpool.h"
 #include <netinet/in.h>
 #include <unistd.h>
 #include <thread>
@@ -29,6 +30,19 @@ void handle_client(int client_fd, AppContext& ctx, Router& router) {
     std::string path    = extract_path(request);
     std::string ip      = get_client_ip(client_fd);
 
+    // rate limit check
+    if (!ctx.rate_limiter->allow(ip)) {
+        std::string response =
+            "HTTP/1.1 429 Too Many Requests\r\n"
+            "Content-Type: application/json\r\n"
+            "Retry-After: 60\r\n\r\n"
+            "{\"error\":\"Too many requests, slow down!\"}";
+        send(client_fd, response.c_str(), response.size(), 0);
+        close(client_fd);
+        active_requests--;
+        return;
+    }
+
     log_request(ip, method, path, 200);
     router.dispatch(request, method, path, client_fd);
     close(client_fd);
@@ -43,7 +57,8 @@ int main() {
     AppContext ctx {
         std::make_shared<Database>("database.db"),
         std::make_shared<SessionManager>(),
-        std::make_shared<FileCache>()
+        std::make_shared<FileCache>(),
+        std::make_shared<RateLimiter>(100, 60)  // 100 requests per 60 seconds
     };
 
     Router router(ctx);
@@ -69,13 +84,15 @@ int main() {
     std::cout << "Server running on http://localhost:8080\n";
     std::cout.flush();
 
+    ThreadPool pool(10);  // 10 worker threads
+
     while (running) {
         int client_fd = accept(server_fd, nullptr, nullptr);
         if (client_fd < 0) break;
 
-        std::thread([client_fd, &ctx, &router]() {
+        pool.submit([client_fd, &ctx, &router]() {
             handle_client(client_fd, ctx, router);
-        }).detach();
+        });
     }
 
     std::cout << "\nShutting down... waiting for " << active_requests << " active request(s)\n";

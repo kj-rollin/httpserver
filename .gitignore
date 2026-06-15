@@ -3,3 +3,7 @@ database.db
 *.log
 __pycache__/
 *.pyc
+cookies.txt
+fix_responses.py
+uploads/
+www/404.html

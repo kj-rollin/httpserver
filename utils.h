@@ -125,7 +125,7 @@ std::string build_404_response() {
         ? custom_content 
         : "<h1>404 Not Found</h1>";
 
-    return "HTTP/1.1 404 Not Found\r\n"
+    return "HTTP/1.1 404 Not Found\r\nConnection: close\r\n"
            "Content-Type: text/html; charset=utf-8\r\n\r\n" + body;
 }
 
@@ -136,7 +136,7 @@ void serve_file(const std::string& path, int client_fd) {
     std::string content = read_file(full_path);
     if (!content.empty()) {
         std::string response =
-            "HTTP/1.1 200 OK\r\n"
+            "HTTP/1.1 200 OK\r\nConnection: close\r\n"
             "Content-Type: " + detect_content_type(path) + 
             "; charset=utf-8\r\n\r\n" + content;
         send(client_fd, response.c_str(), response.size(), 0);
@@ -180,9 +180,19 @@ std::string read_full_request(int client_fd) {
     size_t cl_pos = request.find("Content-Length: ");
     long content_length = 0;
     if (cl_pos != std::string::npos) {
-        size_t cl_start = cl_pos + 17;  // skip "Content-Length: "
+        size_t cl_start = cl_pos + 16;
         size_t cl_end   = request.find("\r\n", cl_start);
-        content_length  = std::stol(request.substr(cl_start, cl_end - cl_start));
+        if (cl_end != std::string::npos) {
+            try {
+                content_length = std::stol(request.substr(cl_start, cl_end - cl_start));
+            } catch (...) {
+            }
+        }
+    }
+
+    const long MAX_REQUEST_SIZE = 10 * 1024 * 1024;
+    if (content_length > MAX_REQUEST_SIZE || content_length < 0) {
+        return "";
     }
 
     // step 3 — keep reading until we have content_length bytes of body
@@ -212,7 +222,7 @@ void serve_file_cached(const std::string& path, int client_fd, FileCache& cache,
     if (!content.empty()) {
         std::string encoding_header = is_compressed ? "Content-Encoding: gzip\r\n" : "";
         std::string response =
-            "HTTP/1.1 200 OK\r\n"
+            "HTTP/1.1 200 OK\r\nConnection: close\r\n"
             "Content-Type: " + detect_content_type(path) +
             "; charset=utf-8\r\n" + encoding_header + "\r\n";
         send(client_fd, response.c_str(), response.size(), 0);
@@ -221,4 +231,26 @@ void serve_file_cached(const std::string& path, int client_fd, FileCache& cache,
         std::string not_found = build_404_response();
         send(client_fd, not_found.c_str(), not_found.size(), 0);
     }
+}
+
+// build complete HTTP response with Content-Length
+std::string build_response(int status_code,
+                           const std::string& status_text,
+                           const std::string& content_type,
+                           const std::string& body,
+                           const std::string& extra_headers = "") {
+    return "HTTP/1.1 " + std::to_string(status_code) + " " + status_text + "\r\n"
+           "Content-Type: " + content_type + "\r\n"
+           "Content-Length: " + std::to_string(body.size()) + "\r\nConnection: close\r\n" +
+           extra_headers +
+           "\r\n" + body;
+}
+
+// shorthand for JSON responses
+std::string json_response(int status_code,
+                          const std::string& status_text,
+                          const std::string& json_body,
+                          const std::string& extra_headers = "") {
+    return build_response(status_code, status_text,
+                          "application/json", json_body, extra_headers);
 }
