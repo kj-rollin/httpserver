@@ -9,8 +9,6 @@
 #include <string>
 #include <memory>
 
-// forward declaration — defined in handlers.h
-
 struct AppContext {
     std::shared_ptr<Database>       db;
     std::shared_ptr<SessionManager> sessions;
@@ -28,7 +26,7 @@ using Handler = std::function<void(
     AppContext&
 )>;
 
-// wraps a handler with login check
+// wraps a handler with login check — redirects to login page (for HTML routes)
 Handler require_auth(Handler handler) {
     return [handler](const std::string& request, int client_fd, AppContext& ctx) {
         std::string token    = extract_cookie(request, "session");
@@ -37,6 +35,23 @@ Handler require_auth(Handler handler) {
         if (username.empty()) {
             std::string response =
                 "HTTP/1.1 302 Found\r\nLocation: /login.html\r\n\r\n";
+            send(client_fd, response.c_str(), response.size(), 0);
+            return;
+        }
+
+        handler(request, client_fd, ctx);
+    };
+}
+
+// wraps a handler with login check — returns 401 JSON (for API routes)
+Handler require_auth_api(Handler handler) {
+    return [handler](const std::string& request, int client_fd, AppContext& ctx) {
+        std::string token    = extract_cookie(request, "session");
+        std::string username = ctx.sessions->validate(token);
+
+        if (username.empty()) {
+            std::string json = "{\"error\":\"Not authenticated\"}";
+            std::string response = json_response(401, "Unauthorized", json);
             send(client_fd, response.c_str(), response.size(), 0);
             return;
         }
@@ -67,14 +82,11 @@ public:
                   const std::string& method,
                   const std::string& path,
                   int client_fd) {
-        // dynamic route — DELETE /api/applications/<id>
         if (method == "DELETE" && path.find("/api/applications/") == 0) {
             handle_api_delete_application(request, client_fd, ctx, path);
             return;
         }
 
-
-        // dynamic route — PUT /api/applications/<id>
         if (method == "PUT" && path.find("/api/applications/") == 0) {
             handle_api_update_application(request, client_fd, ctx, path);
             return;

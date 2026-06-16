@@ -138,9 +138,8 @@ class Database {
         sqlite3_bind_text(stmt, 2, username.c_str(), -1, SQLITE_STATIC);
         
         bool success = (sqlite3_step(stmt) == SQLITE_DONE);
-        sqlite3_finalize(stmt);
-        
         int changes = sqlite3_changes(db);
+        sqlite3_finalize(stmt);
         return success && changes > 0;
     }
 
@@ -185,11 +184,9 @@ class Database {
         int app_id;
         try { app_id = std::stoi(id); } catch (...) { sqlite3_finalize(stmt); return false; }
         sqlite3_bind_int(stmt, 2, app_id);
-
         bool success = (sqlite3_step(stmt) == SQLITE_DONE);
-        sqlite3_finalize(stmt);
-
         int changes = sqlite3_changes(db);
+        sqlite3_finalize(stmt);
         return success && changes > 0;
     }
 

@@ -132,10 +132,27 @@ std::string build_404_response() {
            "Content-Type: text/html; charset=utf-8\r\n\r\n" + body;
 }
 
+
+// safely resolve a requested path within www/, blocking traversal
+std::string resolve_safe_path(const std::string& path) {
+    namespace fs = std::filesystem;
+    fs::path base_dir = fs::current_path() / "www";
+    if (!fs::exists(base_dir)) return "";
+    fs::path base_canonical = fs::canonical(base_dir);
+    fs::path requested = fs::weakly_canonical(base_dir / fs::path(path).relative_path());
+    std::string base_str = base_canonical.string();
+    std::string req_str  = requested.string();
+    if (req_str.compare(0, base_str.size(), base_str) != 0) return "";
+    return req_str;
+}
 // serve static file
 void serve_file(const std::string& path, int client_fd) {
-    std::string full_path = 
-        std::filesystem::current_path().string() + "/www" + path;
+    std::string full_path = resolve_safe_path(path);
+    if (full_path.empty()) {
+        std::string not_found = build_404_response();
+        send(client_fd, not_found.c_str(), not_found.size(), 0);
+        return;
+    }
     std::string content = read_file(full_path);
     if (!content.empty()) {
         std::string response =
@@ -214,8 +231,12 @@ std::string read_full_request(int client_fd) {
 
 // cached version — for static files (CSS/JS/images)
 void serve_file_cached(const std::string& path, int client_fd, FileCache& cache, const std::string& request) {
-    std::string full_path =
-        std::filesystem::current_path().string() + "/www" + path;
+    std::string full_path = resolve_safe_path(path);
+    if (full_path.empty()) {
+        std::string not_found = build_404_response();
+        send(client_fd, not_found.c_str(), not_found.size(), 0);
+        return;
+    }
 
     bool accepts_gzip = request.find("Accept-Encoding:") != std::string::npos &&
                          request.find("gzip") != std::string::npos;

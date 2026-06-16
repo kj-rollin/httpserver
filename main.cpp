@@ -51,7 +51,6 @@ void handle_client(int client_fd, AppContext& ctx, Router& router) {
     log_request(ip, method, path, 200);
     router.dispatch(request, method, path, client_fd);
 
-    active_requests--;
 }
 
 int main() {
@@ -78,6 +77,8 @@ int main() {
     router.add("GET", "/health", handle_health);
 
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    int opt = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     sockaddr_in address{};
     address.sin_family      = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
@@ -99,6 +100,12 @@ int main() {
     while (running) {
         int client_fd = accept(server_fd, nullptr, nullptr);
         if (client_fd < 0) break;
+
+        struct timeval timeout;
+        timeout.tv_sec = 30;
+        timeout.tv_usec = 0;
+        setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        setsockopt(client_fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
         pool.submit([client_fd, &ctx, &router]() {
             handle_client(client_fd, ctx, router);
