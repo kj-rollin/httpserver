@@ -4,6 +4,7 @@
 #include "router.h"
 #include "handlers.h"
 #include <sys/socket.h>
+#include <cerrno>
 #include "threadpool.h"
 #include <netinet/in.h>
 #include <unistd.h>
@@ -99,7 +100,12 @@ int main() {
 
     while (running) {
         int client_fd = accept(server_fd, nullptr, nullptr);
-        if (client_fd < 0) break;
+        if (client_fd < 0) {
+            if (!running) break;  // intentional shutdown
+            if (errno == EINTR || errno == EAGAIN) continue;
+            perror("accept failed");
+            break;
+        }
 
         struct timeval timeout;
         timeout.tv_sec = 30;

@@ -1,5 +1,6 @@
 // session.h
 #pragma once
+#include <atomic>
 #include <map>
 #include <mutex>
 #include <string>
@@ -19,6 +20,18 @@ private:
     std::map<std::string, Session> sessions;
     std::mutex sessions_mutex;
     const int EXPIRY_MINUTES = 30;
+    std::atomic<int> validate_count{0};
+
+    // remove expired sessions — caller must already hold sessions_mutex!
+    void cleanup_expired() {
+        for (auto it = sessions.begin(); it != sessions.end(); ) {
+            if (is_expired(it->second)) {
+                it = sessions.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 
     // generate random token
     std::string generate_token() {
@@ -59,6 +72,11 @@ public:
     // validate token — returns username or empty string
     std::string validate(const std::string& token) {
         std::lock_guard<std::mutex> lock(sessions_mutex);
+
+        if (++validate_count >= 100) {
+            validate_count = 0;
+            cleanup_expired();
+        }
         
         auto it = sessions.find(token);
         if (it == sessions.end()) {

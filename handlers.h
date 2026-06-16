@@ -1,5 +1,6 @@
 // handlers.h
 #include <set>
+#include <algorithm>
 #include "json.h"
 #pragma once
 #include "router.h"
@@ -74,9 +75,14 @@ void handle_upload_post(const std::string& request,
     size_t csrf_pos = body_preview.find("name=\"csrf_token\"");
     std::string submitted_csrf;
     if (csrf_pos != std::string::npos) {
-        size_t value_start = body_preview.find("\r\n\r\n", csrf_pos) + 4;
-        size_t value_end   = body_preview.find("\r\n", value_start);
-        submitted_csrf = body_preview.substr(value_start, value_end - value_start);
+        size_t header_end = body_preview.find("\r\n\r\n", csrf_pos);
+        if (header_end != std::string::npos) {
+            size_t value_start = header_end + 4;
+            size_t value_end   = body_preview.find("\r\n", value_start);
+            if (value_end != std::string::npos) {
+                submitted_csrf = body_preview.substr(value_start, value_end - value_start);
+            }
+        }
     }
 
     if (!ctx.sessions->verify_csrf(token, submitted_csrf)) {
@@ -102,6 +108,10 @@ void handle_upload_post(const std::string& request,
     std::string uploads_dir = 
         std::filesystem::current_path().string() + "/uploads";
     std::filesystem::create_directory(uploads_dir);
+    const long MAX_FILE_SIZE = 5 * 1024 * 1024;  // 5MB
+    std::set<std::string> allowed_extensions = {".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx"};
+    int saved_count = 0;
+    int rejected_count = 0;
 
     for (auto& file : files) {
         // sanitize filename
@@ -111,21 +121,42 @@ void handle_upload_post(const std::string& request,
                 [](char c) { return c == 47 || c == 92 || c == 0; }),
             safe_filename.end());
         if (safe_filename.empty()) safe_filename = "unnamed";
+
+        // validate size
+        if ((long)file.data.size() > MAX_FILE_SIZE) {
+            rejected_count++;
+            continue;
+        }
+
+        // validate extension
+        std::filesystem::path p(safe_filename);
+        std::string ext = p.extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        if (allowed_extensions.find(ext) == allowed_extensions.end()) {
+            rejected_count++;
+            continue;
+        }
+
         std::string unique_name = generate_token() + "_" + safe_filename;
         std::string filepath    = uploads_dir + "/" + unique_name;
 
         std::ofstream out(filepath, std::ios::binary);
+        if (!out) {
+            rejected_count++;
+            continue;
+        }
         out.write(file.data.c_str(), file.data.size());
         out.close();
 
-        // 4. save record to database
-        ctx.db->save_application(username, file.filename, 
+        ctx.db->save_application(username, safe_filename,
                                  "uploads/" + unique_name);
+        saved_count++;
     }
 
     std::string response_body = 
         "<h1>Application submitted! ✅</h1>"
-        "<p>Files uploaded: " + std::to_string(files.size()) + "</p>";
+        "<p>Files saved: " + std::to_string(saved_count) + "</p>"
+        "<p>Files rejected: " + std::to_string(rejected_count) + "</p>";
 
     std::string response =
         "HTTP/1.1 200 OK\r\n"

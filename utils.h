@@ -129,7 +129,8 @@ std::string build_404_response() {
         : "<h1>404 Not Found</h1>";
 
     return "HTTP/1.1 404 Not Found\r\nConnection: close\r\n"
-           "Content-Type: text/html; charset=utf-8\r\n\r\n" + body;
+           "Content-Type: text/html; charset=utf-8\r\n"
+           "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
 }
 
 
@@ -157,8 +158,9 @@ void serve_file(const std::string& path, int client_fd) {
     if (!content.empty()) {
         std::string response =
             "HTTP/1.1 200 OK\r\nConnection: close\r\n"
-            "Content-Type: " + detect_content_type(path) + 
-            "; charset=utf-8\r\n\r\n" + content;
+            "Content-Type: " + detect_content_type(path) +
+            "; charset=utf-8\r\n"
+            "Content-Length: " + std::to_string(content.size()) + "\r\n\r\n" + content;
         send(client_fd, response.c_str(), response.size(), 0);
     } else {
         std::string not_found = build_404_response();
@@ -248,9 +250,9 @@ void serve_file_cached(const std::string& path, int client_fd, FileCache& cache,
         std::string response =
             "HTTP/1.1 200 OK\r\nConnection: close\r\n"
             "Content-Type: " + detect_content_type(path) +
-            "; charset=utf-8\r\n" + encoding_header + "\r\n";
+            "; charset=utf-8\r\n" + encoding_header +
+            "Content-Length: " + std::to_string(content.size()) + "\r\n\r\n" + content;
         send(client_fd, response.c_str(), response.size(), 0);
-        send(client_fd, content.c_str(), content.size(), 0);
     } else {
         std::string not_found = build_404_response();
         send(client_fd, not_found.c_str(), not_found.size(), 0);
