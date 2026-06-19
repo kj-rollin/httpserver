@@ -20,6 +20,7 @@ int server_fd;
 
 void handle_signal(int sig) {
     running = false;
+    shutdown(server_fd, SHUT_RDWR);
     close(server_fd);
 }
 
@@ -137,3 +138,4 @@ int main() {
     std::cout << "Shutdown complete ✅\n";
     return 0;
 }
+// test edit

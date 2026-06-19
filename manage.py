@@ -21,6 +21,7 @@ BUILD_CMD = [
 
 
 server_process = None
+file_observer = None
 
 
 def build():
@@ -117,24 +118,16 @@ class SourceWatcher(FileSystemEventHandler):
 
 
 def watch():
+    global file_observer
     print("[WATCH] Watching source files...")
     restart_server()
 
-    observer = Observer()
-    observer.schedule(SourceWatcher(), ".", recursive=True)
-    observer.start()
+    if file_observer is None:
+        file_observer = Observer()
+        file_observer.schedule(SourceWatcher(), ".", recursive=True)
+        file_observer.start()
 
-    try:
-        while True:
-            time.sleep(1)
-
-    except KeyboardInterrupt:
-        pass
-
-    finally:
-        observer.stop()
-        observer.join()
-        stop_server()
+    print("[WATCH] Active — server auto-reloads on file changes. Other commands still work.")
 
 
 def show_help():
@@ -164,6 +157,7 @@ def status():
 def shell():
     print("HTTP Server Dev Tool")
     print("Type 'help' for commands")
+    global file_observer
 
     while True:
 
@@ -198,6 +192,9 @@ def shell():
             show_help()
 
         elif command in ("quit", "exit"):
+            if file_observer is not None:
+                file_observer.stop()
+                file_observer.join()
             stop_server()
             print("Goodbye")
             break
