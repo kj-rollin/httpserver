@@ -1,5 +1,6 @@
 #pragma once
 #include "utils.h"
+#include "websocket.h"
 #include "rate_limiter.h"
 #include "cache.h"
 #include "database.h"
@@ -14,6 +15,7 @@ struct AppContext {
     std::shared_ptr<SessionManager> sessions;
     std::shared_ptr<FileCache>       cache;
     std::shared_ptr<RateLimiter>     rate_limiter;
+    std::shared_ptr<ConnectionRegistry> ws_registry;
 };
 
 // defined in handlers.h

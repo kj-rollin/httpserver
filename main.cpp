@@ -2,6 +2,7 @@
 #include "database.h"
 #include "session.h"
 #include "router.h"
+#include "websocket.h"
 #include "handlers.h"
 #include <sys/socket.h>
 #include <cerrno>
@@ -35,6 +36,47 @@ void handle_client(int client_fd, AppContext& ctx, Router& router) {
     RequestGuard guard(active_requests, client_fd);
 
     std::string request = read_full_request(client_fd);
+
+    // WebSocket upgrade — handle separately, bypass normal routing
+    if (is_websocket_upgrade(request)) {
+        std::string token    = extract_cookie(request, "session");
+        std::string username = ctx.sessions->validate(token);
+
+        if (username.empty()) {
+            std::string response = "HTTP/1.1 401 Unauthorized\r\n\r\n";
+            send(client_fd, response.c_str(), response.size(), 0);
+            return;
+        }
+
+        send_websocket_handshake(request, client_fd);
+        ctx.ws_registry->add(username, client_fd);
+        std::cout << "[WS] " << username << " connected\n";
+
+        while (true) {
+            char buf[4096];
+            int bytes = recv(client_fd, buf, sizeof(buf), 0);
+            if (bytes <= 0) break;
+
+            std::string raw(buf, bytes);
+            WSFrame frame = parse_ws_frame(raw);
+
+
+            if (frame.opcode == 0x9) {
+                std::string pong = build_ws_frame(frame.payload, 0xA);
+                send(client_fd, pong.c_str(), pong.size(), 0);
+                continue;
+            }
+            if (frame.opcode == 0x8) break;
+
+            if (frame.opcode == 0x1) {
+                std::cout << "[WS] " << username << " says: " << frame.payload << "\n";
+            }
+        }
+
+        ctx.ws_registry->remove(username);
+        std::cout << "[WS] " << username << " disconnected\n";
+        return;
+    }
     std::string method  = extract_method(request);
     std::string path    = extract_path(request);
     std::string ip      = get_client_ip(client_fd);
@@ -63,7 +105,8 @@ int main() {
         std::make_shared<Database>("database.db"),
         std::make_shared<SessionManager>(),
         std::make_shared<FileCache>(),
-        std::make_shared<RateLimiter>(100, 60)  // 100 requests per 60 seconds
+        std::make_shared<RateLimiter>(100, 60),  // 100 requests per 60 seconds
+        std::make_shared<ConnectionRegistry>()
     };
 
     Router router(ctx);

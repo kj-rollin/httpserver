@@ -153,6 +153,12 @@ void handle_upload_post(const std::string& request,
         saved_count++;
     }
 
+    if (saved_count > 0) {
+        // TODO: replace with notify_all(get_admin_usernames(), ...) — see ws_registry notes
+        std::string notif = "{\"type\":\"new_application\",\"applicant\":\"" + json_escape(username) + "\"}";
+        ctx.ws_registry->notify("admin", notif);
+    }
+
     std::string response_body = 
         "<h1>Application submitted! ✅</h1>"
         "<p>Files saved: " + std::to_string(saved_count) + "</p>"
