@@ -48,13 +48,13 @@ std::string extract_cookie(const std::string& request,
     std::string search = name + "=";
     size_t pos = request.find(search);
     if (pos == std::string::npos) return "";
+
     size_t start = pos + search.size();
-    size_t end   = request.find(';', start);
-    if (end == std::string::npos) {
-        size_t line_end = request.find("\r\n", start);
-        if (line_end == std::string::npos) return "";
-        return request.substr(start, line_end - start);
-    }
+    size_t semi  = request.find(';', start);
+    size_t crlf  = request.find("\r\n", start);
+    size_t end   = std::min(semi, crlf);
+
+    if (end == std::string::npos) return "";
     return request.substr(start, end - start);
 }
 
