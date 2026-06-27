@@ -9,7 +9,7 @@
 #include "crypto.h"
 
 
-// ─── login page ───────────────────────────
+// login page
 void handle_login_page(const std::string& request,
                        int client_fd,
                        AppContext& ctx) {
@@ -30,7 +30,7 @@ void handle_login_page(const std::string& request,
     serve_file("/login.html", client_fd);
 }
 
-// ─── login POST ───────────────────────────
+// login POST 
 void handle_login_post(const std::string& request,
                        int client_fd,
                        AppContext& ctx) {
@@ -164,7 +164,7 @@ void handle_upload_post(const std::string& request,
 
     send(client_fd, response.c_str(), response.size(), 0);
 }
-// ─── logout ───────────────────────────────
+// logout 
 void handle_logout(const std::string& request,
                    int client_fd,
                    AppContext& ctx) {

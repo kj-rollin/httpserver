@@ -1,4 +1,3 @@
-// database.h
 #pragma once          // ← prevents double inclusion
 #include <sqlite3.h>
 #include <mutex>
@@ -101,7 +100,6 @@ class Database {
      std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
       std::string time_str = time_buf;
 
-     // 2-4 — your code is perfect, keep as is!
      sqlite3_stmt* stmt;
       const char* sql = "INSERT INTO job_applications (username, filename, filepath, upload_time) VALUES (?, ?, ?, ?)";
     
