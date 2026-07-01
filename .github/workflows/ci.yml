@@ -1,0 +1,94 @@
+
+name: C++ HTTP Server CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang sqlite3 libsqlite3-dev openssl libssl-dev zlib1g-dev ccache
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+        cache: 'pip' # Caches pip dependencies automatically
+
+    - name: Install Python dependencies
+      run: |
+        pip install requests watchdog
+
+    - name: Cache C++ Build
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-
+
+    - name: Configure ccache
+      run: |
+        export PATH="/usr/lib/ccache:$PATH"
+        ccache --max-size=500M
+        ccache --set-config=compression=true
+
+    - name: Database Setup
+      run: |
+        sqlite3 database.db <<EOF
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT DEFAULT 'applicant'
+        );
+        CREATE TABLE IF NOT EXISTS job_applications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            filepath TEXT NOT NULL,
+            upload_time TEXT NOT NULL,
+            status TEXT DEFAULT 'pending'
+        );
+        EOF
+
+    - name: Build server
+      run: |
+        export PATH="/usr/lib/ccache:$PATH"
+        ccache clang++ -std=c++17 main.cpp -lsqlite3 -lssl -lcrypto -lz -o mainserver
+
+    - name: Run server in background
+      run: |
+        ./mainserver &
+        SERVER_PID=$!
+        echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+        sleep 5 # Give server time to start
+      # Use `continue-on-error: true` to ensure cleanup step runs even if server fails to start
+      continue-on-error: true
+
+    - name: Run Python tests
+      run: |
+        python3 test.py
+      # Use `continue-on-error: true` to ensure cleanup step runs even if tests fail
+      continue-on-error: true
+
+    - name: Stop server
+      if: always()
+      run: |
+        if [ -n "$SERVER_PID" ]; then
+          kill $SERVER_PID
+          wait $SERVER_PID || true  # Wait for process to terminate, ignore if already dead
+        fi
