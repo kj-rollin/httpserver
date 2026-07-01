@@ -2,6 +2,7 @@
 #include <map>
 #include "gzip.h"
 #include <shared_mutex>
+#include <mutex>
 #include <string>
 #include <filesystem>
 #include <fstream>
